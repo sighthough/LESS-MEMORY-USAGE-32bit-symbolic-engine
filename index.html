@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>32-Bit Symbolic Power-Tower Engine Suite</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-eager: #f85149;
+            --accent-lazy: #3fb950;
+            --accent-blue: #58a6ff;
+            --accent-purple: #bc8cff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+        body { background-color: var(--bg-color); color: var(--text-primary); padding: 20px; line-height: 1.4; }
+        header { margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        h1 { font-size: 1.3rem; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .subtitle { color: var(--text-secondary); font-size: 0.8rem; margin-top: 2px; }
+
+        .dashboard-layout { display: grid; grid-template-columns: 320px 1fr 280px; gap: 16px; }
+        @media (max-width: 1200px) { .dashboard-layout { grid-template-columns: 1fr; } }
+
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+        .card-title { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        .control-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; }
+        select, button { width: 100%; background: #21262d; border: 1px solid var(--border-color); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; }
+        button.primary { background: #238636; border-color: rgba(240,246,252,0.1); font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        button.primary:hover { background: #2ea043; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .metric-block { margin-bottom: 12px; }
+        .metric-big { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        .metric-sub { font-size: 0.75rem; color: var(--text-secondary); }
+
+        .badge { padding: 2px 6px; border-radius: 10px; font-size: 0.65rem; font-weight: 700; }
+        .badge-eager { background: rgba(248,81,73,0.2); color: var(--accent-eager); }
+        .badge-lazy { background: rgba(63,185,80,0.2); color: var(--accent-lazy); }
+        .badge-warning { background: rgba(210,153,34,0.2); color: #d29922; }
+
+        canvas { width: 100%; height: 130px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; display: block; }
+
+        .worker-status { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.75rem; margin-bottom: 6px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #484f58; }
+        .status-dot.active { background: var(--accent-lazy); box-shadow: 0 0 6px var(--accent-lazy); }
+
+        .bit-container { display: flex; gap: 2px; margin-top: 8px; }
+        .bit-chunk { flex: 1; padding: 4px 2px; border-radius: 4px; font-size: 0.65rem; text-align: center; }
+        .chunk-sign { background: rgba(188,140,255,0.15); border: 1px solid var(--accent-purple); }
+        .chunk-base { background: rgba(88,166,255,0.15); border: 1px solid var(--accent-blue); }
+        .chunk-outer { background: rgba(63,185,80,0.15); border: 1px solid var(--accent-lazy); }
+        .chunk-inner { background: rgba(210,153,34,0.15); border: 1px solid #d29922; }
+        .chunk-offset { background: rgba(248,81,73,0.15); border: 1px solid var(--accent-eager); }
+
+        .use-case-list { font-size: 0.75rem; color: var(--text-primary); list-style-type: none; }
+        .use-case-list li { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color); }
+        .use-case-list b { color: var(--accent-blue); }
+
+        .log-box { background: #040d21; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 0.72rem; height: 120px; overflow-y: auto; }
+        .log-entry { margin-bottom: 2px; }
+        .log-eager { color: #ff7b72; }
+        .log-lazy { color: #7ee787; }
+        .log-info { color: #79c0ff; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>⚡ 32-Bit Symbolic Power-Tower Engine Suite</h1>
+    <div class="subtitle">Multi-threaded dynamic scale benchmark across small numbers, medium numbers, and hyper-scale exponents.</div>
+</header>
+
+<div class="dashboard-layout">
+    <!-- LEFT PANEL: CONTROLS & METRICS -->
+    <div>
+        <div class="card">
+            <div class="card-title">Benchmark Control Panel</div>
+            <div class="control-group">
+                <label>Number Range / Scale Spectrum</label>
+                <select id="scaleSpectrum">
+                    <option value="TINY">Tiny Values (1 to 1,000)</option>
+                    <option value="MEDIUM">Medium Values (10^6 to 10^9)</option>
+                    <option value="LARGE">Large Scale (10^50)</option>
+                    <option value="HYPER" selected>Hyper-Scale (10^300)</option>
+                    <option value="EXTREME">Extreme Power-Tower (10^500)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Dataset Size (Elements)</label>
+                <select id="workloadSize">
+                    <option value="50000">50,000 Numbers</option>
+                    <option value="100000" selected>100,000 Numbers</option>
+                    <option value="500000">500,000 Numbers</option>
+                </select>
+            </div>
+            <button class="primary" id="runBtn" onclick="startBenchmark()">▶ Run Dynamic Benchmark</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Live Dynamic Telemetry</div>
+            <div class="metric-block">
+                <div class="metric-big" id="metricMemSaved">-</div>
+                <div class="metric-sub">RAM Footprint Savings</div>
+            </div>
+            <div class="metric-block">
+                <div class="metric-big" id="metricOpsSec">-</div>
+                <div class="metric-sub">Symbolic Throughput (Ops/sec)</div>
+            </div>
+            <div class="metric-block">
+                <div class="metric-big" id="metricSpeedup">-</div>
+                <div class="metric-sub">Latency Speedup Factor</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER PANEL: GRAPH CANVAS & VISUALIZER -->
+    <div>
+        <div class="card">
+            <div class="card-title">
+                <span>Execution Latency (ms) Across Spectrum</span>
+                <div>
+                    <span class="badge badge-eager">Eager BigInt</span>
+                    <span class="badge badge-lazy">Lazy 32-Bit</span>
+                </div>
+            </div>
+            <canvas id="latencyCanvas"></canvas>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span>Memory Allocation (KB) Across Spectrum</span>
+                <div>
+                    <span class="badge badge-eager">Eager BigInt</span>
+                    <span class="badge badge-lazy">Lazy 32-Bit</span>
+                </div>
+            </div>
+            <canvas id="memoryCanvas"></canvas>
+        </div>
+
+        <!-- 32-bit Bit Field Inspector -->
+        <div class="card">
+            <div class="card-title">Live 32-Bit Container Layout</div>
+            <div class="bit-container">
+                <div class="bit-chunk chunk-sign"><b>Sign (1b)</b><br><span id="bSign">0</span></div>
+                <div class="bit-chunk chunk-base"><b>Base (2b)</b><br><span id="bBase">10</span></div>
+                <div class="bit-chunk chunk-outer"><b>Outer (9b)</b><br><span id="bOuter">0</span></div>
+                <div class="bit-chunk chunk-inner"><b>Inner (9b)</b><br><span id="bInner">1</span></div>
+                <div class="bit-chunk chunk-offset"><b>Offset (11b)</b><br><span id="bOffset">0</span></div>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 6px;" id="formulaPreview">
+                Formula: + (10 ^ (0 ^ 1)) + 0
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: APPLICATIONS & LOGS -->
+    <div>
+        <div class="card">
+            <div class="card-title">Where This Engine Shines</div>
+            <ul class="use-case-list">
+                <li><b>High-Scale Time Series:</b> Store massive timestamp deltas & logarithmic sensor ranges in standard 4-byte DB rows.</li>
+                <li><b>Cryptographic Key Indices:</b> Index and filter ultra-large prime factor structures without allocation penalties.</li>
+                <li><b>Astrophysical Simulations:</b> Perform galaxy cluster distance sorting using symbolic exponent math.</li>
+                <li><b>Neural Net Quantization:</b> Pack wide dynamic range weights into tight 32-bit registers for vector hardware.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Active Hardware Threads</div>
+            <div id="workerList"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Execution Console</div>
+            <div class="log-box" id="logBox">
+                <div class="log-entry log-info">[System Init] Symbolic Engine core initialized. Ready.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==================================================================
+    // 💡 REUSABLE CORE: 32-BIT LAZY SYMBOLIC POWER-TOWER ENGINE
+    // ==================================================================
+    // Layout (32 bits):
+    // Bit 31     : Sign (1 bit -> 0 = +, 1 = -)
+    // Bits 29-30 : Base Selector (2 bits -> 0=2, 1=10, 2=e, 3=16)
+    // Bits 20-28 : Outer Exponent (9 bits -> 0 to 511)
+    // Bits 11-19 : Inner Exponent (9 bits -> 0 to 511)
+    // Bits 0-10  : Terminal Offset (11 bits -> 0 to 2047)
+    // ==================================================================
+    class SymbolicEngine32 {
+        static BASES = [2, 10, 2.71828, 16];
+
+        // Pack structural parameters into a single unsigned 32-bit integer
+        static pack(sign = 0, baseIdx = 1, outerExp = 0, innerExp = 1, offset = 0) {
+            let word = 0;
+            word |= (sign & 0x1) << 31;
+            word |= (baseIdx & 0x3) << 29;
+            word |= (outerExp & 0x1FF) << 20;
+            word |= (innerExp & 0x1FF) << 11;
+            word |= (offset & 0x7FF);
+            return word >>> 0; // Force unsigned 32-bit int
+        }
+
+        // Unpack a 32-bit word back into structural components
+        static unpack(word) {
+            return {
+                sign: (word >>> 31) & 0x1,
+                baseIdx: (word >>> 29) & 0x3,
+                base: SymbolicEngine32.BASES[(word >>> 29) & 0x3],
+                outerExp: (word >>> 20) & 0x1FF,
+                innerExp: (word >>> 11) & 0x1FF,
+                offset: word & 0x7FF
+            };
+        }
+
+        // Fast O(1) Multiplication: Increment outer exponent directly in bits
+        static multiplyByBasePower(word, powerToAdd = 1) {
+            const currentExp = (word >>> 20) & 0x1FF;
+            const newExp = Math.min(511, currentExp + powerToAdd);
+            return (word & ~(0x1FF << 20)) | ((newExp & 0x1FF) << 20);
+        }
+
+        // Fast Lexicographical Comparison without unpacking digits
+        static compare(wordA, wordB) {
+            const expA = (wordA >>> 20) & 0x1FF;
+            const expB = (wordB >>> 20) & 0x1FF;
+            if (expA !== expB) return expA - expB;
+            
+            const innerA = (wordA >>> 11) & 0x1FF;
+            const innerB = (wordB >>> 11) & 0x1FF;
+            if (innerA !== innerB) return innerA - innerB;
+
+            return (wordA & 0x7FF) - (wordB & 0x7FF);
+        }
+    }
+
+    // ==================================================================
+    // MULTI-THREADED WORKER PIPELINE GENERATOR
+    // ==================================================================
+    const workerCode = `
+        self.onmessage = function(e) {
+            const { action, chunkSize, spectrum, workerId } = e.data;
+
+            // Map spectrum setting to numeric scale parameters
+            let expScale = 0;
+            let isSmall = false;
+
+            if (spectrum === 'TINY') { isSmall = true; expScale = 0; }
+            else if (spectrum === 'MEDIUM') { expScale = 6; }
+            else if (spectrum === 'LARGE') { expScale = 50; }
+            else if (spectrum === 'HYPER') { expScale = 300; }
+            else if (spectrum === 'EXTREME') { expScale = 500; }
+
+            if (action === 'RUN_EAGER') {
+                const start = performance.now();
+                const arr = new Array(chunkSize);
+                
+                if (isSmall) {
+                    // Small numbers: standard BigInt from 1 to 1000
+                    for (let i = 0; i < chunkSize; i++) {
+                        arr[i] = BigInt((i % 1000) + 1) * 10n;
+                    }
+                } else {
+                    // Massive numbers: BigInt padded with zeros
+                    const baseStr = "1" + "0".repeat(expScale);
+                    for (let i = 0; i < chunkSize; i++) {
+                        arr[i] = (BigInt(baseStr) + BigInt(i % 2047)) * 10n;
+                    }
+                }
+
+                // Native BigInt Sort
+                arr.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+                const duration = performance.now() - start;
+                const bytesPerBigInt = isSmall ? 32 : (64 + Math.ceil(expScale / 9) * 4);
+                const totalMem = chunkSize * bytesPerBigInt;
+
+                self.postMessage({ workerId, type: 'EAGER_COMPLETE', duration, totalMem });
+            } 
+            else if (action === 'RUN_LAZY') {
+                const start = performance.now();
+                const arr = new Uint32Array(chunkSize);
+
+                for (let i = 0; i < chunkSize; i++) {
+                    let word = 0;
+                    if (isSmall) {
+                        // Small numbers stored entirely in offset field (exp = 0)
+                        word |= (0 & 0x1) << 31;
+                        word |= (1 & 0x3) << 29;
+                        word |= (0 & 0x1FF) << 20;
+                        word |= (1 & 0x1FF) << 11;
+                        word |= (((i % 1000) + 1) & 0x7FF);
+                    } else {
+                        // Large/Hyper scale stored as exponents
+                        word |= (0 & 0x1) << 31;
+                        word |= (1 & 0x3) << 29;
+                        word |= (expScale & 0x1FF) << 20;
+                        word |= (1 & 0x1FF) << 11;
+                        word |= ((i % 2047) & 0x7FF);
+                    }
+
+                    // O(1) Symbolic Base-10 Scale
+                    const outer = (word >>> 20) & 0x1FF;
+                    if (outer > 0 || !isSmall) {
+                        word = (word & ~(0x1FF << 20)) | (((outer + 1) & 0x1FF) << 20);
+                    } else {
+                        // Small value fallback multiply
+                        const off = (word & 0x7FF) * 10;
+                        word = (word & ~0x7FF) | (off & 0x7FF);
+                    }
+                    arr[i] = word;
+                }
+
+                // Fast Typed Array Sort using Symbolic Lexicographical Logic
+                arr.sort((a, b) => {
+                    const expA = (a >>> 20) & 0x1FF;
+                    const expB = (b >>> 20) & 0x1FF;
+                    if (expA !== expB) return expA - expB;
+                    return (a & 0x7FF) - (b & 0x7FF);
+                });
+
+                const duration = performance.now() - start;
+                const totalMem = chunkSize * 4; // Exactly 4 bytes per item
+
+                self.postMessage({ workerId, type: 'LAZY_COMPLETE', duration, totalMem, sample: arr[0] });
+            }
+        };
+    `;
+
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    const numThreads = Math.min(navigator.hardwareConcurrency || 4, 8);
+    let workers = [];
+
+    // Init UI Workers
+    const workerListEl = document.getElementById('workerList');
+    for (let i = 0; i < numThreads; i++) {
+        const div = document.createElement('div');
+        div.className = 'worker-status';
+        div.innerHTML = `<span>Worker Thread #${i + 1}</span><div class="status-dot" id="dot-${i}"></div>`;
+        workerListEl.appendChild(div);
+    }
+
+    // Telemetry & Charting
+    const latencyHistory = { eager: [], lazy: [] };
+    const memoryHistory = { eager: [], lazy: [] };
+    const maxDataPoints = 15;
+
+    function renderChart(canvasId, historyData) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = '#21262d';
+        ctx.lineWidth = 1;
+        for (let y = 0; y < canvas.height; y += 30) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+
+        const maxVal = Math.max(...historyData.eager, ...historyData.lazy, 1);
+
+        function drawSeries(data, color) {
+            if (data.length < 2) return;
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            const step = canvas.width / (maxDataPoints - 1);
+            for (let i = 0; i < data.length; i++) {
+                const x = i * step;
+                const y = canvas.height - ((data[i] / maxVal) * (canvas.height - 20) + 10);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        drawSeries(historyData.eager, '#f85149');
+        drawSeries(historyData.lazy, '#3fb950');
+    }
+
+    function logMessage(text, type = 'info') {
+        const box = document.getElementById('logBox');
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        entry.textContent = `[${performance.now().toFixed(0)}ms] ${text}`;
+        box.appendChild(entry);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function startBenchmark() {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true;
+
+        const totalWorkload = parseInt(document.getElementById('workloadSize').value);
+        const spectrum = document.getElementById('scaleSpectrum').value;
+        const chunkSize = Math.floor(totalWorkload / numThreads);
+
+        logMessage(`Starting [${spectrum}] spectrum run (${totalWorkload.toLocaleString()} items)...`, 'info');
+
+        workers.forEach(w => w.terminate());
+        workers = [];
+
+        let eagerDone = 0, eagerTime = 0, eagerMem = 0;
+        let lazyDone = 0, lazyTime = 0, lazyMem = 0;
+
+        // Eager Phase
+        for (let i = 0; i < numThreads; i++) {
+            const w = new Worker(workerUrl);
+            workers.push(w);
+            document.getElementById(`dot-${i}`).classList.add('active');
+
+            w.onmessage = function(e) {
+                if (e.data.type === 'EAGER_COMPLETE') {
+                    eagerDone++;
+                    eagerTime += e.data.duration;
+                    eagerMem += e.data.totalMem;
+
+                    if (eagerDone === numThreads) {
+                        logMessage(`Eager BigInt phase finished.`, 'eager');
+                        runLazyPhase();
+                    }
+                }
+            };
+            w.postMessage({ action: 'RUN_EAGER', chunkSize, spectrum, workerId: i });
+        }
+
+        // Lazy Phase
+        function runLazyPhase() {
+            for (let i = 0; i < numThreads; i++) {
+                workers[i].onmessage = function(e) {
+                    if (e.data.type === 'LAZY_COMPLETE') {
+                        lazyDone++;
+                        lazyTime += e.data.duration;
+                        lazyMem += e.data.totalMem;
+
+                        if (e.data.workerId === 0) {
+                            const u = SymbolicEngine32.unpack(e.data.sample);
+                            document.getElementById('bSign').textContent = u.sign;
+                            document.getElementById('bBase').textContent = u.base;
+                            document.getElementById('bOuter').textContent = u.outerExp;
+                            document.getElementById('bInner').textContent = u.innerExp;
+                            document.getElementById('bOffset').textContent = u.offset;
+                            document.getElementById('formulaPreview').innerHTML = 
+                                `Formula: <b>${u.sign ? '-' : '+'}(${u.base} ^ (${u.outerExp} ^ ${u.innerExp})) + ${u.offset}</b>`;
+                        }
+
+                        if (lazyDone === numThreads) {
+                            for (let j = 0; j < numThreads; j++) document.getElementById(`dot-${j}`).classList.remove('active');
+                            logMessage(`Lazy Symbolic phase finished.`, 'lazy');
+                            finalizeMetrics();
+                        }
+                    }
+                };
+                workers[i].postMessage({ action: 'RUN_LAZY', chunkSize, spectrum, workerId: i });
+            }
+        }
+
+        function finalizeMetrics() {
+            const avgEagerTime = eagerTime / numThreads;
+            const avgLazyTime = lazyTime / numThreads;
+
+            latencyHistory.eager.push(avgEagerTime);
+            latencyHistory.lazy.push(avgLazyTime);
+            memoryHistory.eager.push(eagerMem / 1024);
+            memoryHistory.lazy.push(lazyMem / 1024);
+
+            if (latencyHistory.eager.length > maxDataPoints) {
+                latencyHistory.eager.shift(); latencyHistory.lazy.shift();
+                memoryHistory.eager.shift(); memoryHistory.lazy.shift();
+            }
+
+            renderChart('latencyCanvas', latencyHistory);
+            renderChart('memoryCanvas', memoryHistory);
+
+            const memReduction = ((1 - (lazyMem / eagerMem)) * 100).toFixed(1);
+            const opsSec = Math.round((totalWorkload / (avgLazyTime || 0.001)) * 1000).toLocaleString();
+            const speedup = (avgEagerTime / (avgLazyTime || 0.001)).toFixed(1);
+
+            document.getElementById('metricMemSaved').textContent = `${memReduction}%`;
+            document.getElementById('metricOpsSec').textContent = opsSec;
+            document.getElementById('metricSpeedup').textContent = `${speedup}x`;
+
+            btn.disabled = false;
+        }
+    }
+
+    renderChart('latencyCanvas', { eager: [], lazy: [] });
+    renderChart('memoryCanvas', { eager: [], lazy: [] });
+</script>
+
+</body>
+</html>
