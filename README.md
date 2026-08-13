@@ -12,8 +12,6 @@ also that demo is in the index file of this repository and hopefully
 the ai marked the code that makes this work so you can rip it easily from it 
 have fun :D 
 
-and a link to the actual chat i had with the ai if you want to understand how we got to this 
-https://share.gemini.google/XNPfwysakzhk
 
 
 # ⚡ Breaking the Memory Wall: A 32-Bit Symbolic Power-Tower Engine
