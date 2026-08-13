@@ -132,3 +132,5 @@ The tech demo features a multi-threaded parallel execution pipeline built in nat
 
 * **Ultra-Low-Power Microcontroller Telemetry:** Constrained microcontrollers (such as ESP32 or ARM Cortex-M devices with as little as 32 KB of RAM) measuring wide-range physical phenomena (e.g., Geiger counters, environmental sensors, industrial vibration monitors) can log wide scale ranges without pulling in heavy floating-point software emulation libraries.
 * **Satellite & Harsh-Environment Flight Software:** Spacecraft telemetry engines operating on radiation-hardened, low-clock-speed processors can index and filter telemetry data using lightweight 32-bit integer instructions.
+
+* made by [sighthough](https://youtu.be/UtPiUGwu-0Q) using googles gemini 3.6 ai
